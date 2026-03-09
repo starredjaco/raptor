@@ -128,6 +128,19 @@ def mode_agentic(args: list) -> int:
     return run_script(agentic_script, args)
 
 
+def mode_hardware(args: list) -> int:
+    """Run hardware security enumeration."""
+    script_root = Path(__file__).parent
+    hardware_script = script_root / "packages/hardware/enumerator.py"
+
+    if not hardware_script.exists():
+        print(f"✗ Hardware enumerator not found: {hardware_script}")
+        return 1
+
+    print("\n[*] Starting hardware security enumeration...\n")
+    return run_script(hardware_script, args)
+
+
 def mode_codeql(args: list) -> int:
     """Run CodeQL analysis."""
     script_root = Path(__file__).parent
@@ -165,6 +178,7 @@ def show_mode_help(mode: str) -> None:
         'agentic': script_root / "raptor_agentic.py",
         'codeql': script_root / "raptor_codeql.py",
         'analyze': script_root / "packages/llm_analysis/agent.py",
+        'hardware': script_root / "packages/hardware/enumerator.py",
     }
     
     if mode not in mode_scripts:
@@ -196,6 +210,7 @@ Available Modes:
   agentic     - Full autonomous workflow (Semgrep + CodeQL + LLM analysis)
   codeql      - CodeQL-only analysis
   analyze     - LLM-powered vulnerability analysis (requires SARIF input)
+  hardware    - Hardware interface enumeration (Glasgow Interface Explorer)
 
 Examples:
   # Full autonomous workflow
@@ -216,10 +231,13 @@ Examples:
   # LLM analysis of existing SARIF
   python3 raptor.py analyze --repo /path/to/code --sarif findings.sarif
 
+  # Hardware interface enumeration
+  python3 raptor.py hardware --voltage 3.3 --pins 0-7
+
   # Get help for a specific mode
   python3 raptor.py help scan
-  python3 raptor.py help fuzz
-  python3 raptor.py scan --help
+  python3 raptor.py help hardware
+  python3 raptor.py hardware --help
 
 For more information, visit: https://github.com/gadievron/raptor
         """
@@ -244,6 +262,7 @@ Available Modes:
   agentic     - Full autonomous workflow (Semgrep + CodeQL + LLM analysis)
   codeql      - CodeQL-only analysis
   analyze     - LLM-powered vulnerability analysis (requires SARIF input)
+  hardware    - Hardware interface enumeration (Glasgow Interface Explorer)
 
 Examples:
   # Full autonomous workflow
@@ -264,10 +283,13 @@ Examples:
   # LLM analysis of existing SARIF
   python3 raptor.py analyze --repo /path/to/code --sarif findings.sarif
 
+  # Hardware interface enumeration
+  python3 raptor.py hardware --voltage 3.3 --pins 0-7
+
   # Get help for a specific mode
   python3 raptor.py help scan
-  python3 raptor.py help fuzz
-  python3 raptor.py scan --help
+  python3 raptor.py help hardware
+  python3 raptor.py hardware --help
 
 For more information, visit: https://github.com/gadievron/raptor
         """
@@ -292,6 +314,7 @@ For more information, visit: https://github.com/gadievron/raptor
         'agentic': mode_agentic,
         'codeql': mode_codeql,
         'analyze': mode_llm_analysis,
+        'hardware': mode_hardware,
     }
     
     if mode not in mode_handlers:

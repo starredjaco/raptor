@@ -24,6 +24,7 @@ VERY IMPORTANT: double check that you followed these instructions.
 /scan /fuzz /web /agentic /codeql /analyze - Security testing
 /exploit /patch - Generate PoCs and fixes (beta)
 /validate - Exploitability validation pipeline (see below)
+/hardware - Hardware security: recon → interface enum → firmware extraction → analysis (see below)
 
 **Note:** `/agentic` now automatically runs exploitability validation (Phase 2) between scanning and analysis. Use `--skip-validation` to bypass.
 /crash-analysis - Autonomous crash root-cause analysis (see below)
@@ -99,6 +100,35 @@ The `/oss-forensics` command provides evidence-backed forensic investigation for
 
 ---
 
+## HARDWARE SECURITY
+
+The `/hardware` command provides guided hardware security research from physical reconnaissance through firmware extraction and analysis.
+
+**Usage:** `/hardware [--target <description>] [--firmware <path>] [--interface uart|spi|jtag|i2c]`
+
+**Workflow:** Recon → Interface Enumeration → Extraction → Firmware Analysis
+
+**Skills** (in `.claude/skills/hardware-research/`):
+- `hardware-recon` - PCB inspection, chip ID, test point mapping, target map creation
+- `glasgow-interaction` - Glasgow Python API patterns, applet usage, scripted workflows
+- `jtag-exploitation` - JTAG/SWD chain enumeration, debug access, memory extraction, RDP bypass
+- `uart-exploitation` - UART discovery, baud detection, U-Boot exploitation, shell escape
+- `spi-flash-extraction` - SPI NOR flash ID, in-circuit/out-of-circuit read, verify, patch, write-back
+- `i2c-enumeration` - I2C bus scan, EEPROM read/write, secure element interaction
+- `fault-injection` - Methodology: characterise, glitch (Thomas Roth approach), EMFI
+- `chipwhisperer` - CW-Lite/Pro/Husky: voltage glitch, clock glitch, power trace, CPA (Colin O'Flynn)
+- `firmware-extraction` - Unpack/triage firmware, hand off to raptor analysis pipeline
+
+**Persona:** `tiers/personas/hardware_security_researcher.md` (Joe Grand + Joe FitzPatrick + Thomas Roth + Colin O'Flynn)
+
+**Requirements:** Glasgow Interface Explorer (`pip install glasgow`), physical access to target
+
+**Gap analysis:** `docs/hardware-gap-analysis.md` — what is missing and recommended build order
+
+**Output:** `.out/hardware-<timestamp>/`
+
+---
+
 ## EXPLOITABILITY VALIDATION
 
 The `/validate` command validates that vulnerability findings are real, reachable, and exploitable.
@@ -123,6 +153,7 @@ The `/validate` command validates that vulnerability findings are real, reachabl
 **When developing exploits:** Load `tiers/exploit-guidance.md` (constraints, techniques)
 **When errors occur:** Load `tiers/recovery.md` (recovery protocol)
 **When requested:** Load `tiers/personas/[name].md` (expert personas)
+**When doing hardware security:** Load `tiers/personas/hardware_security_researcher.md` + `.claude/skills/hardware-research/SKILL.md`
 
 ---
 

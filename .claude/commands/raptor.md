@@ -1,4 +1,4 @@
-# RAPTOR - Security Testing Assistant
+# /raptor - RAPTOR Security Testing Assistant
 
 You are helping the user run RAPTOR, an autonomous security testing framework.
 
@@ -37,13 +37,31 @@ python3 raptor.py web --url <url>
 ```
 This tests for OWASP Top 10 vulnerabilities.
 
-### 4. Quick Semgrep Scan
-For fast static analysis:
+### 4. Firmware Scanning
+For extracted firmware filesystems (embedded Linux, OpenWRT, etc.):
+```bash
+python3 raptor.py scan --firmware-root <extracted_root> --arch mips --kernel-version 6.6
+```
+This activates firmware mode:
+- Inventories all ELF binaries (arch auto-detected from ELF headers if `--arch auto`)
+- Prioritises high-value targets: `httpd`, `cgi-bin`, `dropbear`, `wpa_supplicant`, etc.
+- Runs firmware-specific Semgrep rules (`dangerous-functions`, `cgi-injection`, `hardcoded-creds`)
+- Writes `firmware-inventory.json` alongside SARIF results
+
+Typical flow after binwalk extraction:
+```bash
+binwalk -Me firmware.bin
+python3 raptor.py scan --firmware-root _firmware.bin.extracted/ \
+  --output .out/firmware-$(date +%s)/
+```
+
+### 5. Quick Semgrep Scan
+For fast static analysis on source code:
 ```bash
 python3 raptor.py scan --repo <path>
 ```
 
-### 5. CodeQL Only
+### 6. CodeQL Only
 For in-depth static analysis:
 ```bash
 python3 raptor.py codeql --repo <path>
@@ -55,6 +73,7 @@ When the user says things like:
 - "scan this code" → Use `agentic` mode
 - "fuzz this binary" → Use `fuzz` mode
 - "test this website" → Use `web` mode
+- "scan this firmware" / "analyse this firmware" → Use `scan --firmware-root` mode
 - "find vulnerabilities" → Ask what they want to test, then choose appropriate mode
 - "check for secrets" → Use `scan` mode with `--policy_groups secrets`
 

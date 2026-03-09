@@ -80,6 +80,8 @@ class RaptorConfig:
         "flows": ("semgrep_dataflow", "p/default"),
         "sinks": ("semgrep_sinks", "p/xss"),
         "best-practices": ("semgrep_best_practices", "p/default"),
+        # Firmware/embedded rules — local rules only, no upstream pack equivalent
+        "firmware": ("semgrep_firmware", "p/default"),
     }
 
     # Default Policy Configuration
