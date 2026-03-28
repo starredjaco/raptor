@@ -74,7 +74,7 @@ Rank variants by exploitability:
 3. `likely_tainted` with public entry point
 4. `likely_tainted` with authenticated entry point
 5. `unlikely_tainted` — document, low priority
-6. `false_positive` — discard, record why so the same match isn't re-investigated
+6. `false_positive` — retained in `variants.json` for audit trail (with notes explaining why), but excluded from `recommended_traces` and `validation_scope`
 
 ## Output Format
 

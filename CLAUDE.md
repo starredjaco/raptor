@@ -136,7 +136,7 @@ The `/understand` command provides deep, adversarial code comprehension for secu
 
 **Output:** `.out/code-understanding-<timestamp>/`
 
-**Pipeline integration:** `context-map.json` → `attack-surface.json`, `variants.json` → `checklist.json` for `/validate`
+**Pipeline integration:** Planned — output schemas are aligned with validation pipeline formats for future integration.
 
 ---
 

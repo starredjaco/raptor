@@ -80,15 +80,7 @@ flow_format: source → transform(s) → sink
 
 ## Integration with Validation Pipeline
 
-Code understanding output feeds directly into exploitability validation:
-
-| Understanding Output | Validation Input |
-|---------------------|-----------------|
-| `context-map.json` (sources, sinks, trust boundaries) | Pre-populates `attack-surface.json` for Stage B |
-| `flow-trace-<id>.json` (confirmed data flow) | Confirms reachability for Stage C sanity check |
-| `variants.json` (pattern matches) | Expands `checklist.json` scope for Stage 0 |
-
-When running `/understand` before `/validate`, pass `--out <workdir>` to write JSON outputs where the validator can consume them.
+Output schemas are aligned with the validation pipeline's formats (`attack-surface.json`, `attack-paths.json`, `findings.json`). Direct pipeline integration is planned for a follow-up.
 
 ---
 

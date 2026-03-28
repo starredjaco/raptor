@@ -58,7 +58,7 @@ At each sink, record:
 
 Summarize what the attacker controls:
 - Input they provide directly (high control)
-- Input filtered by previous checks (partial control. assess bypass potential)
+- Input filtered by previous checks (partial control — assess bypass potential)
 - Input not under attacker control (discard from threat model)
 
 ## Output Format
@@ -139,7 +139,7 @@ Summarize what the attacker controls:
 
 ## Teach Mode Integration
 
-If you encounter an unfamiliar framework, library, or pattern while tracing, say so explicitly!. Switch to [TEACH] mode to understand the mechanism, then return to the trace.
+If you encounter an unfamiliar framework, library, or pattern while tracing, say so explicitly. Switch to [TEACH] mode to understand the mechanism, then return to the trace.
 
 Example: *"Step 4 uses SQLAlchemy's `text()` construct, so loading teach mode to understand whether this is parameterised."*
 

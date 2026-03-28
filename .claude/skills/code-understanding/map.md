@@ -104,6 +104,29 @@ Produce a brief summary covering:
       "notes": "Auth check at line 38, but only validates token format, not permissions"
     }
   ],
+  "sink_details": [
+    {
+      "id": "SINK-001",
+      "type": "db_query|shell_exec|file_write|file_read|deserialize|network|template|crypto",
+      "operation": "cursor.execute(raw_sql)",
+      "file": "src/db/query.py",
+      "line": 89,
+      "reaches_from": ["EP-001"],
+      "trust_boundaries_crossed": ["TB-001"],
+      "parameterized": false,
+      "notes": "Query string built via f-string at line 87"
+    }
+  ],
+  "boundary_details": [
+    {
+      "id": "TB-001",
+      "type": "auth_check|authz_check|input_validation|privilege_drop",
+      "file": "src/middleware/auth.py",
+      "line": 12,
+      "covers": ["EP-001", "EP-002"],
+      "gaps": "EP-003 bypasses this middleware via direct import at src/admin/bulk.py:67"
+    }
+  ],
   "unchecked_flows": [
     {
       "entry_point": "EP-003",
