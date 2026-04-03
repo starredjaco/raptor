@@ -331,3 +331,206 @@ class TestCalculateCostSplit:
             assert "output" in rates, f"{model_name} missing 'output' rate"
             assert rates["input"] >= 0, f"{model_name} has negative input rate"
             assert rates["output"] >= 0, f"{model_name} has negative output rate"
+
+
+class TestThinkingModelFallback:
+    """Verify reasoning_content fallback for Ollama thinking models."""
+
+    def _make_ollama_provider(self):
+        """Create an OpenAICompatibleProvider configured for Ollama."""
+        mock_openai, cleanup = _ensure_mock_sdk(_providers_module, 'OpenAI')
+        with patch("packages.llm_analysis.llm.providers.OPENAI_SDK_AVAILABLE", True), \
+             patch("packages.llm_analysis.llm.providers.INSTRUCTOR_AVAILABLE", False):
+            from packages.llm_analysis.llm.providers import OpenAICompatibleProvider
+            config = ModelConfig(
+                provider="ollama", model_name="qwen3:8b",
+                api_base="http://localhost:11434/v1",
+            )
+            provider = OpenAICompatibleProvider(config)
+        return provider, mock_openai, cleanup
+
+    def test_reasoning_content_used_when_content_empty(self):
+        """Thinking models with empty content fall back to reasoning_content."""
+        provider, mock_openai, cleanup = self._make_ollama_provider()
+        try:
+            response = MagicMock()
+            response.choices = [MagicMock()]
+            response.choices[0].message.content = ""
+            response.choices[0].message.reasoning_content = "The answer is 42"
+            response.choices[0].message.refusal = None
+            response.choices[0].finish_reason = "stop"
+            response.usage = MagicMock()
+            response.usage.prompt_tokens = 50
+            response.usage.completion_tokens = 10
+            response.usage.completion_tokens_details = None
+            mock_openai.return_value.chat.completions.create.return_value = response
+
+            result = provider.generate("What is the answer?")
+            assert result.content == "The answer is 42"
+        finally:
+            cleanup()
+
+    def test_content_preferred_over_reasoning_content(self):
+        """When content is present, reasoning_content is not used."""
+        provider, mock_openai, cleanup = self._make_ollama_provider()
+        try:
+            response = MagicMock()
+            response.choices = [MagicMock()]
+            response.choices[0].message.content = "Normal response"
+            response.choices[0].message.reasoning_content = "Thinking process..."
+            response.choices[0].message.refusal = None
+            response.choices[0].finish_reason = "stop"
+            response.usage = MagicMock()
+            response.usage.prompt_tokens = 50
+            response.usage.completion_tokens = 10
+            response.usage.completion_tokens_details = None
+            mock_openai.return_value.chat.completions.create.return_value = response
+
+            result = provider.generate("test")
+            assert result.content == "Normal response"
+        finally:
+            cleanup()
+
+    def test_both_empty_returns_empty(self):
+        """When both content and reasoning_content are empty, returns empty."""
+        provider, mock_openai, cleanup = self._make_ollama_provider()
+        try:
+            response = MagicMock()
+            response.choices = [MagicMock()]
+            response.choices[0].message.content = ""
+            response.choices[0].message.reasoning_content = ""
+            response.choices[0].message.refusal = None
+            response.choices[0].finish_reason = "stop"
+            response.usage = MagicMock()
+            response.usage.prompt_tokens = 50
+            response.usage.completion_tokens = 0
+            response.usage.completion_tokens_details = None
+            mock_openai.return_value.chat.completions.create.return_value = response
+
+            result = provider.generate("test")
+            assert result.content == ""
+        finally:
+            cleanup()
+
+    def test_no_reasoning_content_attr(self):
+        """Models without reasoning_content attribute work normally."""
+        provider, mock_openai, cleanup = self._make_ollama_provider()
+        try:
+            response = MagicMock()
+            response.choices = [MagicMock()]
+            response.choices[0].message.content = "Normal response"
+            del response.choices[0].message.reasoning_content
+            response.choices[0].message.refusal = None
+            response.choices[0].finish_reason = "stop"
+            response.usage = MagicMock()
+            response.usage.prompt_tokens = 50
+            response.usage.completion_tokens = 10
+            response.usage.completion_tokens_details = None
+            mock_openai.return_value.chat.completions.create.return_value = response
+
+            result = provider.generate("test")
+            assert result.content == "Normal response"
+        finally:
+            cleanup()
+
+
+class TestContentFilterDetection:
+    """Verify that content filter blocks and model refusals raise clear errors."""
+
+    def _make_openai_provider(self):
+        """Create an OpenAICompatibleProvider with mocked SDK."""
+        mock_openai, cleanup = _ensure_mock_sdk(_providers_module, 'OpenAI')
+        with patch("packages.llm_analysis.llm.providers.OPENAI_SDK_AVAILABLE", True), \
+             patch("packages.llm_analysis.llm.providers.INSTRUCTOR_AVAILABLE", False):
+            from packages.llm_analysis.llm.providers import OpenAICompatibleProvider
+            config = ModelConfig(
+                provider="openai", model_name="gpt-5.4",
+                api_key="test-key", api_base="https://api.openai.com/v1",
+            )
+            provider = OpenAICompatibleProvider(config)
+        return provider, mock_openai, cleanup
+
+    def test_content_filter_raises(self):
+        """finish_reason=content_filter with empty content raises RuntimeError."""
+        provider, mock_openai, cleanup = self._make_openai_provider()
+        try:
+            response = MagicMock()
+            response.choices = [MagicMock()]
+            response.choices[0].message.content = ""
+            response.choices[0].message.refusal = None
+            response.choices[0].message.reasoning_content = None
+            response.choices[0].finish_reason = "content_filter"
+            response.usage = MagicMock()
+            response.usage.prompt_tokens = 100
+            response.usage.completion_tokens = 0
+            response.usage.completion_tokens_details = None
+            mock_openai.return_value.chat.completions.create.return_value = response
+
+            with pytest.raises(RuntimeError, match="content filter"):
+                provider.generate("generate exploit for buffer overflow")
+        finally:
+            cleanup()
+
+    def test_refusal_raises(self):
+        """Model refusal (o-series) raises RuntimeError."""
+        provider, mock_openai, cleanup = self._make_openai_provider()
+        try:
+            response = MagicMock()
+            response.choices = [MagicMock()]
+            response.choices[0].message.content = ""
+            response.choices[0].message.refusal = "I cannot help with exploit development"
+            response.choices[0].message.reasoning_content = None
+            response.choices[0].finish_reason = "stop"
+            response.usage = MagicMock()
+            response.usage.prompt_tokens = 100
+            response.usage.completion_tokens = 0
+            response.usage.completion_tokens_details = None
+            mock_openai.return_value.chat.completions.create.return_value = response
+
+            with pytest.raises(RuntimeError, match="refused request"):
+                provider.generate("generate exploit")
+        finally:
+            cleanup()
+
+    def test_normal_response_no_error(self):
+        """Normal response with content passes through."""
+        provider, mock_openai, cleanup = self._make_openai_provider()
+        try:
+            response = MagicMock()
+            response.choices = [MagicMock()]
+            response.choices[0].message.content = "This is exploitable."
+            response.choices[0].message.refusal = None
+            response.choices[0].message.reasoning_content = None
+            response.choices[0].finish_reason = "stop"
+            response.usage = MagicMock()
+            response.usage.prompt_tokens = 100
+            response.usage.completion_tokens = 50
+            response.usage.completion_tokens_details = None
+            mock_openai.return_value.chat.completions.create.return_value = response
+
+            result = provider.generate("analyze this vulnerability")
+            assert result.content == "This is exploitable."
+        finally:
+            cleanup()
+
+    def test_content_filter_with_partial_content_passes(self):
+        """content_filter with non-empty content passes through (partial response)."""
+        provider, mock_openai, cleanup = self._make_openai_provider()
+        try:
+            response = MagicMock()
+            response.choices = [MagicMock()]
+            response.choices[0].message.content = "The vulnerability is..."
+            response.choices[0].message.refusal = None
+            response.choices[0].message.reasoning_content = None
+            response.choices[0].finish_reason = "content_filter"
+            response.usage = MagicMock()
+            response.usage.prompt_tokens = 100
+            response.usage.completion_tokens = 10
+            response.usage.completion_tokens_details = None
+            mock_openai.return_value.chat.completions.create.return_value = response
+
+            result = provider.generate("analyze this")
+            assert result.content == "The vulnerability is..."
+            assert result.finish_reason == "content_filter"
+        finally:
+            cleanup()
